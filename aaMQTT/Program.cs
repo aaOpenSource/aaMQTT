@@ -101,9 +101,9 @@ namespace aaMQTT
 
                 log.Info("MQTT connection status is " + _mqttClient.IsConnected.ToString());
             }
-            catch (Exception ex)
+            catch
             {
-                throw ex;
+                throw;
             }
         }
 
@@ -121,9 +121,9 @@ namespace aaMQTT
                     {
                         _LMX_Server = new ArchestrA.MxAccess.LMXProxyServerClass();
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        throw ex;
+                        throw;
                     }
                 }
 
@@ -141,21 +141,27 @@ namespace aaMQTT
                 _MXAccessSettings = JsonConvert.DeserializeObject<localMXAccessSettings>(System.IO.File.ReadAllText("mxaccess.json"));
 
                 // Loop through all of the tags and add
-                foreach (string tagname in _MXAccessSettings.publishtags)
+                foreach (publish publishtag in _MXAccessSettings.publishtags)
                 {
-                    log.Info("Adding Publish for " + tagname);
-                    hitem = _LMX_Server.AddItem(_hLMX, tagname);
+                    log.Info("Adding Publish for " + publishtag.tag);
+                    hitem = _LMX_Server.AddItem(_hLMX, publishtag.tag);
 
                     if(hitem > 0)
                     {
-                        _MXAccessTagDictionary.Add(hitem, tagname);
+                        _MXAccessTagDictionary.Add(hitem, publishtag.tag);
                         _LMX_Server.Advise(_hLMX, hitem);
                     }
                 }
 
+                // Loop through all of the tags we are subscribing to and get those on supervisory advise so we can perform writes
                 if (MQTTOK())
                 {
-                    // Loop through all of the tags we are subscribing to and get those on supervisory advise so we can perform writes
+
+                    // Now add the subscriptions
+                    List<string> topics = new List<string>();
+                    List<byte> qoslevels = new List<byte>();
+
+                    // First get on advise
                     foreach (subscription sub in _MXAccessSettings.subscribetags)
                     {
                         log.Info("Adding Subscribe for " + sub.writetag);
@@ -166,16 +172,13 @@ namespace aaMQTT
                             sub.hitem = hitem;
                             _MXAccessTagDictionary.Add(hitem, sub.writetag);
                             _LMX_Server.AdviseSupervisory(_hLMX, hitem);
-
-                            // Add MQTT Subscription
-                            if (_mqttClient.IsConnected)
-                            {
-                                byte[] qosLevels = { 1 };
-                                string[] topics = { sub.topic };
-                                _mqttClient.Subscribe(topics, qosLevels);
-                            }
+                            topics.Add(sub.topic);
+                            qoslevels.Add(sub.qoslevel);
                         }
                     }
+
+                    // Now add all the subscritpions and QOS in one statement
+                    _mqttClient.Subscribe(topics.ToArray<string>(), qoslevels.ToArray<byte>());
                 }
 
             }
@@ -239,7 +242,7 @@ namespace aaMQTT
                 log.Debug("Received update for " + newItem.TagName);
 
                 // Verify we are itnerested in publishing this update
-                if (_MXAccessSettings.publishtags.IndexOf(newItem.TagName) > -1)
+                if (_MXAccessSettings.publishtags.Exists(x=>x.tag.Equals(newItem.TagName)))
                 {
                     PublishMXItem(newItem);
                 }
@@ -254,14 +257,21 @@ namespace aaMQTT
         private static void PublishMXItem(MXItem mxItem)
         {
             string topic;
+            publish publishitem;
+            byte qoslevel;
+            bool retain;
+
             try
             {   
                 if(MQTTOK())
                 {
                 topic = "/" + _MXAccessSettings.roottopic + "/" + mxItem.TagName.Replace('[', '_').Replace(']', ' ').Trim() + "/value";
+                publishitem = _MXAccessSettings.publishtags.Find(p => p.tag.Equals(mxItem.TagName));
+                qoslevel = publishitem.qoslevel;
+                retain = publishitem.retain;
 
                 // Publish the value change
-                _mqttClient.Publish(topic, System.Text.Encoding.UTF8.GetBytes(mxItem.Value.ToString()));
+                _mqttClient.Publish(topic, System.Text.Encoding.UTF8.GetBytes(mxItem.Value.ToString()),qoslevel,retain);
 
                 log.Debug("Published updated to " + topic);
                 }
