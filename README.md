@@ -11,5 +11,5 @@ At this point I don't have any major plans for feature adds in the future but if
 * [Andy Robinson](mailto:andy@phase2automation.com), Principal of [Phase 2 Automation](http://phase2automation.com).
 
 ## License
-MIT License. See the [LICENSE file](/license) for details.
+MIT License. See the [LICENSE file](/LICENSE) for details.
 
