@@ -28,7 +28,7 @@ namespace aaMQTT
         private static Dictionary<int, string> _MXAccessTagDictionary;
 
         //object for MXAccess Settings
-        private static localMXAccessSettings _MXAccessSettings; 
+        private static localMXAccessSettings _MXAccessSettings;
 
         static void Main(string[] args)
         {
@@ -42,7 +42,7 @@ namespace aaMQTT
                 ConnectMXAccess();
 
                 Console.ReadKey();
-                
+
             }
             catch (Exception ex)
             {
@@ -53,7 +53,7 @@ namespace aaMQTT
                 // Always disconnect on shutdown
                 DisconnectMQTT();
                 DisconnectMXAccess();
-            }            
+            }
         }
 
         private static void DisconnectMQTT()
@@ -66,7 +66,7 @@ namespace aaMQTT
                     _mqttClient.Disconnect();
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 log.Error(ex);
             }
@@ -83,7 +83,7 @@ namespace aaMQTT
                 _mqttClient = new MqttClient(mqttSettings.host, mqttSettings.port, false, null);
 
                 if (mqttSettings.clientid == "")
-                {                    
+                {
                     // Generate new client id if it is blank in the mqttSettings file
                     mqttSettings.clientid = Environment.MachineName + System.Guid.NewGuid().ToString();
 
@@ -96,7 +96,7 @@ namespace aaMQTT
                 // Make the connection by logging in and specifying client id
                 log.Info("Logging in with client ID " + mqttSettings.clientid + " and username " + mqttSettings.username);
                 _mqttClient.Connect(mqttSettings.clientid, mqttSettings.username, mqttSettings.password);
-                
+
                 _mqttClient.MqttMsgPublishReceived += _mqttClient_MqttMsgPublishReceived;
 
                 log.Info("MQTT connection status is " + _mqttClient.IsConnected.ToString());
@@ -146,7 +146,7 @@ namespace aaMQTT
                     log.Info("Adding Publish for " + publishtag.tag);
                     hitem = _LMX_Server.AddItem(_hLMX, publishtag.tag);
 
-                    if(hitem > 0)
+                    if (hitem > 0)
                     {
                         _MXAccessTagDictionary.Add(hitem, publishtag.tag);
                         _LMX_Server.Advise(_hLMX, hitem);
@@ -172,7 +172,7 @@ namespace aaMQTT
                             sub.hitem = hitem;
                             _MXAccessTagDictionary.Add(hitem, sub.writetag);
                             _LMX_Server.AdviseSupervisory(_hLMX, hitem);
-                            topics.Add(sub.topic);
+                            topics.Add(sub.topic.ToLower());
                             qoslevels.Add(sub.qoslevel);
                         }
                     }
@@ -182,9 +182,9 @@ namespace aaMQTT
                 }
 
             }
-            catch (Exception ex)
+            catch
             {
-                log.Error(ex);
+                throw;
             }
         }
 
@@ -204,7 +204,7 @@ namespace aaMQTT
                 // Unregister
                 _LMX_Server.Unregister(_hLMX);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 log.Error(ex);
             }
@@ -221,7 +221,7 @@ namespace aaMQTT
                 log.Error(ex);
             }
         }
-        
+
         private static void LMX_OnDataChange(int hLMXServerHandle, int phItemHandle, object pvItemValue, int pwItemQuality, object pftItemTimeStamp, ref MXSTATUS_PROXY[] pVars)
         {
             try
@@ -242,7 +242,7 @@ namespace aaMQTT
                 log.Debug("Received update for " + newItem.TagName);
 
                 // Verify we are itnerested in publishing this update
-                if (_MXAccessSettings.publishtags.Exists(x=>x.tag.Equals(newItem.TagName)))
+                if (_MXAccessSettings.publishtags.Exists(x => x.tag.Equals(newItem.TagName)))
                 {
                     PublishMXItem(newItem);
                 }
@@ -262,37 +262,34 @@ namespace aaMQTT
             bool retain;
 
             try
-            {   
-                if(MQTTOK())
+            {
+                if (MQTTOK())
                 {
-                topic = "/" + _MXAccessSettings.roottopic + "/" + mxItem.TagName.Replace('[', '_').Replace(']', ' ').Trim() + "/value";
-                publishitem = _MXAccessSettings.publishtags.Find(p => p.tag.Equals(mxItem.TagName));
-                qoslevel = publishitem.qoslevel;
-                retain = publishitem.retain;
+                    //topic = "/" + _MXAccessSettings.roottopic + "/" + mxItem.TagName.Replace('[', '_').Replace(']', ' ').Trim() + "/value";
+                    topic = "/" + _MXAccessSettings.roottopic + "/" + mxItem.TagName + "/value";
+                    publishitem = _MXAccessSettings.publishtags.Find(p => p.tag.Equals(mxItem.TagName));
+                    qoslevel = publishitem.qoslevel;
+                    retain = publishitem.retain;
 
-                // Publish the value change
-                _mqttClient.Publish(topic, System.Text.Encoding.UTF8.GetBytes(mxItem.Value.ToString()),qoslevel,retain);
+                    // Publish the value change
+                    _mqttClient.Publish(topic.ToLower(), System.Text.Encoding.UTF8.GetBytes(mxItem.Value.ToString()), qoslevel, retain);
 
-                log.Debug("Published updated to " + topic);
+                    log.Debug("Published updated to " + topic + " with QOS " + qoslevel + " and Retain " + retain);
                 }
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 log.Error(ex);
             }
-
         }
 
         private static void _mqttClient_MqttMsgPublishReceived(object sender, uPLibrary.Networking.M2Mqtt.Messages.MqttMsgPublishEventArgs e)
         {
             try
             {
-                // Extract topic
-                string topic = e.Topic;
-
                 //Find matching topic in subscription list and get the write tag
-                int hitem = _MXAccessSettings.subscribetags.Find(x => x.topic.Equals(topic)).hitem;
+                int hitem = _MXAccessSettings.subscribetags.Find(x => x.topic.ToLower().Equals(e.Topic)).hitem;
 
                 //Now find the tag in the dictionary to get the correct hitem
                 _LMX_Server.Write(_hLMX, hitem, System.Text.ASCIIEncoding.UTF8.GetString(e.Message), 0);
@@ -301,7 +298,6 @@ namespace aaMQTT
             {
                 log.Error(ex);
             }
-
         }
 
         private static bool MQTTOK()
