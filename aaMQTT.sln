@@ -8,7 +8,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{246FBE62-DF1B-4FEE-89D1-0D7DD1ECC9D1}"
 	ProjectSection(SolutionItems) = preProject
 		aaMQTT\mqttsettings.json = aaMQTT\mqttsettings.json
-		MXAccessTags.json = MXAccessTags.json
 	EndProjectSection
 EndProject
 Global

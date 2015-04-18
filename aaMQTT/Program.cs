@@ -62,7 +62,10 @@ namespace aaMQTT
             try
             {
                 log.Info("Disconnecting MQTT Client");
-                _mqttClient.Disconnect();
+                if (_mqttClient != null)
+                {
+                    _mqttClient.Disconnect();
+                }
             }
             catch(Exception ex)
             {
@@ -185,17 +188,24 @@ namespace aaMQTT
 
         static void DisconnectMXAccess()
         {
-            log.Info("Disconnecting MXAccess");
-
-            // Remove all items 
-            foreach(int hitem in _MXAccessTagDictionary.Keys)
+            try
             {
-                _LMX_Server.UnAdvise(_hLMX, hitem);
-                _LMX_Server.RemoveItem(_hLMX, hitem);                
-            }
+                log.Info("Disconnecting MXAccess");
 
-            // Unregister
-            _LMX_Server.Unregister(_hLMX);
+                // Remove all items 
+                foreach (int hitem in _MXAccessTagDictionary.Keys)
+                {
+                    _LMX_Server.UnAdvise(_hLMX, hitem);
+                    _LMX_Server.RemoveItem(_hLMX, hitem);
+                }
+
+                // Unregister
+                _LMX_Server.Unregister(_hLMX);
+            }
+            catch(Exception ex)
+            {
+                log.Error(ex);
+            }
         }
 
         private static void LMX_OnWriteComplete(int hLMXServerHandle, int phItemHandle, ref MXSTATUS_PROXY[] pVars)
@@ -287,7 +297,22 @@ namespace aaMQTT
 
         private static bool MQTTOK()
         {
-            return (_mqttClient != null) & (_mqttClient.IsConnected);
+            bool returnValue = false;
+
+            try
+            {
+                if (_mqttClient != null)
+                {
+                    returnValue = _mqttClient.IsConnected;
+                }
+            }
+            catch
+            {
+                returnValue = false;
+            }
+
+            return returnValue;
+
         }
     }
 }
