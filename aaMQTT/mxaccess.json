@@ -1,0 +1,19 @@
+{
+    "regexmatch": "abc",
+    "regexreplace": "abc",
+    "roottopic": "data",
+    "publishtags": [
+        "Rnd.Values[1]",
+        "Rnd.Values[2]",
+        "Rnd.Values[3]",
+        "Rnd.Values[4]",
+        "Rnd.Values[5]"
+    ],
+    "subscribetags": [
+        { "topic": "/data/TEST/Area_001/Rnd.Values[1]/value", "writetag": "writevals.val[1]" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[2]/value", "writetag": "writevals.val[2]" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[3]/value", "writetag": "writevals.val[3]" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[4]/value", "writetag": "writevals.val[4]" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[5]/value", "writetag": "writevals.val[5]" }
+    ]
+}

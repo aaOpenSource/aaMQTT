@@ -1,0 +1,7 @@
+﻿{
+    "host": "hostname",
+    "port": 1883,
+    "username": "user",
+    "password": "pass",
+    "clientid": "ClientTester"
+}

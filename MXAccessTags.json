@@ -1,0 +1,12 @@
+{
+
+    "publishregexmatch": "abc",
+    "publishregexreplace": "abc",
+    "tags": [
+        "Rnd.Values[1]",
+        "Rnd.Values[2]",
+        "Rnd.Values[3]",
+        "Rnd.Values[4]",
+        "Rnd.Values[5]"
+    ]
+}
