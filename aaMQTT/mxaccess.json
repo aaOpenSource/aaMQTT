@@ -3,17 +3,17 @@
     "regexreplace": "abc",
     "roottopic": "data",
     "publishtags": [
-        "Rnd.Values[1]",
-        "Rnd.Values[2]",
-        "Rnd.Values[3]",
-        "Rnd.Values[4]",
-        "Rnd.Values[5]"
+        { "tag": "Rnd.Values[1]", "qoslevel": "0", "retain": "true" },
+        { "tag": "Rnd.Values[2]", "qoslevel": "1", "retain": "false" },
+        { "tag": "Rnd.Values[3]", "qoslevel": "2", "retain": "true" },
+        { "tag": "Rnd.Values[4]", "qoslevel": "0", "retain": "false" },
+        { "tag": "Rnd.Values[5]", "qoslevel": "1", "retain": "true" }
     ],
     "subscribetags": [
-        { "topic": "/data/TEST/Area_001/Rnd.Values[1]/value", "writetag": "writevals.val[1]" },
-        { "topic": "/data/TEST/Area_001/Rnd.Values[2]/value", "writetag": "writevals.val[2]" },
-        { "topic": "/data/TEST/Area_001/Rnd.Values[3]/value", "writetag": "writevals.val[3]" },
-        { "topic": "/data/TEST/Area_001/Rnd.Values[4]/value", "writetag": "writevals.val[4]" },
-        { "topic": "/data/TEST/Area_001/Rnd.Values[5]/value", "writetag": "writevals.val[5]" }
+        { "topic": "/data/TEST/Area_001/Rnd.Values[1]/value", "writetag": "writevals.val[1]", "qoslevel": "0" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[2]/value", "writetag": "writevals.val[2]", "qoslevel": "1" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[3]/value", "writetag": "writevals.val[3]", "qoslevel": "2" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[4]/value", "writetag": "writevals.val[4]", "qoslevel": "0" },
+        { "topic": "/data/TEST/Area_001/Rnd.Values[5]/value", "writetag": "writevals.val[5]", "qoslevel": "1" }
     ]
 }
