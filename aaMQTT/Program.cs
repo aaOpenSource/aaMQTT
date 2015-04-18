@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 using aaMXItem;
 
 [assembly: log4net.Config.XmlConfigurator(ConfigFile = "log.config", Watch = true)]
-
 namespace aaMQTT
 {
     class Program
