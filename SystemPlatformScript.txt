@@ -1,0 +1,228 @@
+﻿Declarations
+---------------------------------
+dim Tags[500] as string;
+dim QOS[500] as integer;
+dim Retain[500] as boolean;
+dim Values[500] as indirect;
+dim LastValues[500] as string;
+dim LastIndexVerified as integer;
+dim MQTTClient as uPLibrary.Networking.M2Mqtt.MqttClient;
+dim Index as integer;
+dim Length as integer;
+dim WaitCounter as integer;
+dim Topic as string;
+dim sb as System.Text.StringBuilder;
+
+dim configHost as string;
+dim configPort as integer;
+dim configclientID as string;
+dim configusername as string;
+dim configpassword as string;
+dim configRootTopic as string;
+dim statusConnected as boolean;
+dim stepIndex as integer;
+dim configmaxWaitBindTime as integer;
+dim configIncludeGalaxyInTopic as boolean;
+dim configIncludeAreaInTopic as boolean;
+dim lastCmdEnable as boolean;
+
+Expression: Me.CMD.Enable
+Trigger Type: WhileTrue
+Async: True 60000ms
+
+Execution Text
+---------------------------------
+
+
+{
+Usage Notes
+
+1) Learn about MQTT
+	Google-->MQTT-->Read
+
+2) For the code to work you must import an MQTTClient dll.  This project uses M2MQTT.
+
+https://m2mqtt.codeplex.com/ --> Downloads --> Binaries 
+I am using the Binary for .Net45 on Server 2008 R2 with SP2014R2
+
+3) Setup your configuration for the MQTT Client in the section below
+
+4)  Deploy and set CMD.Enable = True.  This will make the MQTTConnection, Bind the Attributes, and then start transmitting them to the broker.
+}
+
+{Begin Settings}
+Tags[1] = "Rnd.Values[1]";
+QOS[1] = 1;
+Retain[1] = true;
+Tags[2] = "Rnd.Values[2]";
+QOS[2] = 0;
+Retain[2] = true;
+Tags[3] = "Rnd.Values[3]";
+QOS[3] = 1;
+Retain[3] = false;
+Tags[4] = "Rnd.Values[4]";
+QOS[4] = 2;
+Retain[4] = false;
+Tags[5] = "Rnd.Values[5]";
+QOS[5] = 1;
+Retain[5] = false;
+
+Length = 5; 'Tags.Length;
+
+configHost = "XXXXXXX";
+configPort = "XXXXXX";
+configclientID = MyPlatform.Host + "_" + Me.Tagname;
+configusername = "XXXXX";
+configpassword = "XXXXX";
+configmaxWaitBindTime = 10;
+configRootTopic = "data";
+configIncludeAreaInTopic = true;
+configIncludeGalaxyInTopic = true;
+
+{End Settings}
+
+' Reset on deploy
+if Me.scrExecute.ExecutionCnt < 2 then
+	stepIndex = 0;
+endif;
+
+' Restart at 0 when the enable goes from false to true
+if lastCmdEnable <> Me.CMD.Enable then
+	if Me.CMD.Enable == true then
+		stepIndex = 0;
+	endif;
+endif;
+
+try
+	if stepIndex == 0 and ((Me.scrExecute.ExecutionCnt mod 10) == 0) then
+		if MQTTClient == null then
+			LogMessage("Creating new Instance of MQTT Client");
+			MQTTClient = new uPLibrary.Networking.M2Mqtt.MqttClient(configHost,configPort,false,null);
+		else
+			if MQTTClient.IsConnected == false then
+
+				LogMessage("Connecting");
+				MQTTClient.Connect(configclientID,configusername, configpassword);
+			
+				LogMessage("Connection status is " + MQTTClient.IsConnected);		
+			else
+				stepIndex = 100;
+			endif; ' if MQTTClient.IsConnected == false then
+		endif; ' if MQTTClient == null then
+	endif; ' if stepIndex == 0 then
+
+	if stepIndex > 0 then 
+		if (MQTTClient <> null) then
+			statusConnected = MQTTClient.IsConnected;
+		endif;
+	endif;
+
+	if stepIndex == 100 then
+
+		if Me.Flag.Debug.Level > 0 then
+			LogMessage("Step.Index " + stepIndex);
+		endif;
+
+		stepIndex = 110; 
+	endif;
+
+	if stepIndex == 110 then
+
+		if Me.Flag.Debug.Level > 0 then
+			LogMessage("Step.Index " + stepIndex);
+		endif;
+
+		for Index = 1 to Length
+			if Tags[Index] <> "" then
+				LogMessage("Binding " + Tags[Index]);
+				Values[Index].BindTo(Tags[Index]);
+			endif;
+		next;
+
+		LastIndexVerified = 1;
+		stepIndex = 120;
+	endif;
+
+	if stepIndex == 120 then
+
+		if Me.Flag.Debug.Level > 0 then
+			LogMessage("Step.Index " + stepIndex);
+		endif;
+
+		for Index = LastIndexVerified to Length
+
+			if Tags[Index] <> "" then
+
+				LogMessage("Verifying " + Tags[Index]);
+
+				WaitCounter = 0;
+
+				while(Isgood(Values[Index]) == false)
+					WaitCounter = WaitCounter + 1;
+					
+					if WaitCounter > configmaxWaitBindTime then
+						exit while;
+					endif;
+				endwhile;
+
+				WaitCounter = 0;
+
+				if isgood(Values[Index]) then
+					LogMessage("Verified " + Tags[Index]);
+					LastIndexVerified = Index;
+				endif;
+
+			endif; ' if Tags[Index] <> "" then
+		next; ' for Index = LastIndexVerified to Length
+
+		stepIndex = 200;
+
+	endif;
+
+	if stepIndex == 200 then
+		for Index = 1 to Length
+			if LastValues[Index] <> Values[Index].Value then
+				if(MQTTClient.IsConnected and (Tags[Index] <> "")) then
+					
+					sb = new System.Text.StringBuilder();
+					sb.Append("/" + configRootTopic);
+					
+					if configIncludeGalaxyInTopic then
+						sb.Append("/" + MyPlatform.Host);
+					endif;
+
+					if configIncludeAreaInTopic then
+						sb.Append("/" + Me.Area);
+					endif;
+			
+					sb.Append("/" + Tags[Index] + "/value");
+
+					Topic = sb.ToString();
+
+					if Me.Flag.Debug.Level > 0 then
+						LogMessage("Updating Topic " + Topic);
+					endif;
+
+					MQTTClient.Publish(Topic,System.Text.Encoding.UTF8.GetBytes(Values[Index].Value),System.Byte.Parse(QOS[Index]),Retain[Index]);
+				endif;
+			endif;
+		next;
+
+		stepIndex = 210;
+	endif;
+
+	' Cache the last values so we only need to transmit changes
+	if stepIndex == 210 then
+		for Index = 1 to Length
+			LastValues[Index] = Values[Index].Value;
+		next;
+
+		stepIndex = 200;
+	endif;
+
+catch
+	logerror(error);
+endtry;
+
+
+lastCmdEnable = Me.CMD.Enable;
