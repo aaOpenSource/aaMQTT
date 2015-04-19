@@ -18,6 +18,7 @@ namespace aaMQTT
 
         private static MqttClient _mqttClient;
 
+
         // LMX Interface declarations
         private static ArchestrA.MxAccess.LMXProxyServerClass _LMX_Server;
 
